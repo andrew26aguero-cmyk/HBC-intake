@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Honey Badger Coaching — Start Your Intake</title>
+  <meta name="description" content="Get a custom program built personally by Andrew. Fill out your intake — takes about 5 minutes." />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body,#root{height:100%;background:#0F0F0F}
+    body{-webkit-font-smoothing:antialiased;font-family:system-ui,sans-serif}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    const MAKE_WEBHOOK = "https://hook.us2.make.com/5vovf9w9pwssc1kyw1rdwpuoavqjilq1";
+
+    async function fireWebhook(payload) {
+      const res = await fetch(MAKE_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+    }
+
+    function buildPayload(goalKey, data) {
+      return {
+        goal: goalKey,
+        goal_label: { fatloss:"Lose Fat", strength:"Get Stronger", muscle:"Build Muscle" }[goalKey],
+        timestamp: new Date().toISOString(),
+        name:data.name||"", email:data.email||"", phone:data.phone||"", instagram:data.insta||"",
+        age:data.age||"", weight:data.weight||"", body_fat:data.bf||"", sex:data.sex||"",
+        training_years:data.tage||"", current_split:data.split||"", days_per_week:data.freq||"",
+        session_length:data.duration||"", equipment:data.equip||"", cardio:data.cardio||"",
+        daily_protein:data.protein||"", daily_calories:data.calories||"", meals_per_day:data.meals||"",
+        food_tracking:data.tracking||"", nutrition_obstacle:data.obstacle||"",
+        sleep_hours:data.sleep||"", sleep_quality:data.sleepq||"", stress_level:data.stress||"",
+        morning_energy:data.energy||"", digestion:data.gut||"", fat_storage_site:data.fatsite||"",
+        injuries:data.injuries||"", medical_conditions:data.medical||"",
+        fat_loss_target:data.target||"", fat_loss_timeline:data.timeline||"", fat_loss_barriers:data.barriers||"",
+        strength_goal:data.sgoal||"", current_lifts:data.lifts||"", weak_link:data.weak||"", strength_timeline:data.stline||"",
+        lagging_parts:data.lagging||"", physique_goal:data.look||"", bulk_approach:data.surplus||"", muscle_timeline:data.mtline||"",
+      };
+    }
+
+    const GOALS = {
+      fatloss:  { label:"Lose Fat",     emoji:"🔥", desc:"Structured fat loss — no crash diets, no cardio torture." },
+      strength: { label:"Get Stronger", emoji:"💪", desc:"Build real, lasting strength around how your body actually moves." },
+      muscle:   { label:"Build Muscle", emoji:"⚡", desc:"Build where you're behind — training and nutrition working together." },
+    };
+
+    const STEP_BASICS = { title:"The basics", subtitle:"Your numbers set the foundation for everything we build.", fields:[
+      { id:"name",   label:"First name",                          type:"text",   placeholder:"e.g. Alex" },
+      { id:"age",    label:"Age",                                 type:"number", placeholder:"32",  unit:"yrs" },
+      { id:"weight", label:"Current weight",                      type:"number", placeholder:"185", unit:"lbs" },
+      { id:"bf",     label:"Body fat % — rough estimate is fine", type:"number", placeholder:"18",  unit:"%" },
+      { id:"sex",    label:"Biological sex",                      type:"select", options:["Male","Female","Prefer not to say"] },
+    ]};
+
+    const STEP_TRAINING = { title:"Your training", subtitle:"How you train right now tells us exactly where to start.", fields:[
+      { id:"tage",     label:"How long have you been training consistently?", type:"select", options:["Less than 1 year","1–2 years","2–4 years","4–6 years","6+ years"] },
+      { id:"split",    label:"Current training split",                        type:"select", options:["Upper / Lower","Push Pull Legs","Full Body","Body Part / Bro Split","5/3/1 or similar","No consistent split"] },
+      { id:"freq",     label:"Training days per week",                        type:"select", options:["2 days","3 days","4 days","5 days","6 days"] },
+      { id:"duration", label:"Average session length",                        type:"select", options:["30–45 min","45–60 min","60–75 min","75–90 min","90+ min"] },
+      { id:"equip",    label:"Equipment access",                              type:"select", options:["Full commercial gym","Home gym — full barbell","Dumbbells only","Bodyweight only"] },
+      { id:"cardio",   label:"Current cardio",                                type:"text",   placeholder:"e.g. 30 min LISS 3x/week, HIIT 2x, or 'none'" },
+    ]};
+
+    const STEP_NUTRITION = { title:"Nutrition baseline", subtitle:"We anchor your plan to protein first, then map the rest to your training output.", fields:[
+      { id:"protein",  label:"Daily protein (estimate)",               type:"number",   placeholder:"150",  unit:"g/day" },
+      { id:"calories", label:"Daily calories (estimate)",              type:"number",   placeholder:"2400", unit:"kcal" },
+      { id:"meals",    label:"Meals per day",                          type:"select",   options:["1–2 meals / IF","3 meals","4 meals","5+ meals"] },
+      { id:"tracking", label:"Do you currently track food?",           type:"select",   options:["Yes — food scale","Yes — eyeballing","Loosely / sometimes","No — not at all"] },
+      { id:"obstacle", label:"What makes eating well hardest for you?",type:"textarea", placeholder:"Busy schedule, travel, cravings, social eating…" },
+    ]};
+
+    const STEP_HORMONAL = { title:"Recovery & hormonal picture", subtitle:"Recovery is where results are made. These signals tell us more than most training logs.", fields:[
+      { id:"sleep",   label:"Average sleep per night",      type:"select", options:["Under 5 hrs","5–6 hrs","6–7 hrs","7–8 hrs","8+ hrs"] },
+      { id:"sleepq",  label:"Sleep quality",                type:"select", options:["Poor — wake often / feel wrecked","Fair — restless","Good","Excellent — wake refreshed"] },
+      { id:"stress",  label:"Daily stress level",           type:"select", options:["Very high — chronic / overwhelming","High — most days","Moderate — manageable","Low"] },
+      { id:"energy",  label:"Morning energy on waking",     type:"select", options:["Exhausted — dread getting up","Sluggish — need coffee immediately","Fair","Good — alert within 30 min","Excellent"] },
+      { id:"gut",     label:"Digestion",                    type:"select", options:["Issues — bloating, cramping, irregular","Occasional issues","Generally good","Great"] },
+      { id:"fatsite", label:"Where do you store fat first?",type:"select", options:["Belly / midsection","Love handles / obliques","Lower back","Chest / pecs","Glutes / hips / thighs","Everywhere evenly"] },
+    ]};
+
+    const STEP_HEALTH = { title:"Health & injuries", subtitle:"We design your program around your body — not a generic template.", fields:[
+      { id:"injuries", label:"Any injuries, pain, or movement issues?",  type:"textarea", placeholder:"e.g. knee pain on squats, shoulder impingement — or 'none'" },
+      { id:"medical",  label:"Medical conditions we should know about?", type:"textarea", placeholder:"e.g. hypothyroid, high blood pressure — or 'none'" },
+    ]};
+
+    const STEP_CONTACT = { title:"How do we reach you?", subtitle:"Your intake goes straight to Andrew. He'll reach out personally within 24 hours.", isContact:true, fields:[
+      { id:"email", label:"Email address",    type:"email", placeholder:"you@example.com" },
+      { id:"phone", label:"Phone number",     type:"tel",   placeholder:"(210) 555-0123" },
+      { id:"insta", label:"Instagram handle", type:"text",  placeholder:"@yourhandle" },
+    ]};
+
+    const GOAL_STEPS = {
+      fatloss:  { title:"Your fat loss goal",      subtitle:"The more specific you are, the better we can build your plan.", fields:[
+        { id:"target",   label:"What's your goal? Be specific.", type:"text",     placeholder:"e.g. lose 25 lbs, get to 12% body fat" },
+        { id:"timeline", label:"Timeline",                       type:"select",   options:["I want results fast","8–12 weeks","3–6 months","6–12 months","No hard deadline"] },
+        { id:"barriers", label:"What's held you back before?",   type:"textarea", placeholder:"Restricting too hard, cardio burnout, weekend eating…" },
+      ]},
+      strength: { title:"Your strength goal",      subtitle:"These numbers let us spot your structural weak points and fix them fast.", fields:[
+        { id:"sgoal",  label:"What's your main strength goal?",           type:"textarea", placeholder:"e.g. 405 lb deadlift, 315 squat — be specific" },
+        { id:"lifts",  label:"Current best lifts (approximate)",          type:"textarea", placeholder:"Squat: ___, Bench: ___, Deadlift: ___, OHP: ___" },
+        { id:"weak",   label:"Where do you feel weakest or most limited?",type:"textarea", placeholder:"e.g. upper back on deadlift, lockout on bench…" },
+        { id:"stline", label:"Timeline",                                  type:"select",   options:["8 weeks","12 weeks","6 months","1 year","No deadline"] },
+      ]},
+      muscle:   { title:"Your muscle building goal", subtitle:"The clearer your picture, the better we can attack your weak points.", fields:[
+        { id:"lagging", label:"Which body parts are behind?",             type:"textarea", placeholder:"e.g. chest is flat, arms are thin…" },
+        { id:"look",    label:"What physique are you going for?",         type:"textarea", placeholder:"Athletic and lean, noticeably more muscular…" },
+        { id:"surplus", label:"Are you okay gaining some body fat to grow?", type:"select", options:["Yes — I'm ready to commit to a real bulk","Lean gains only — slow and steady","Recomp — same weight, better composition","Not sure — help me decide"] },
+        { id:"mtline",  label:"Your timeline",                            type:"select",   options:["8 weeks","12 weeks","6 months","1 year","Long-term — this is a lifestyle"] },
+      ]},
+    };
+
+    const FORMS = {
+      fatloss:  [STEP_BASICS, STEP_TRAINING, STEP_NUTRITION, STEP_HORMONAL, GOAL_STEPS.fatloss,  STEP_HEALTH, STEP_CONTACT],
+      strength: [STEP_BASICS, STEP_TRAINING, STEP_NUTRITION, STEP_HORMONAL, GOAL_STEPS.strength, STEP_HEALTH, STEP_CONTACT],
+      muscle:   [STEP_BASICS, STEP_TRAINING, STEP_NUTRITION, STEP_HORMONAL, GOAL_STEPS.muscle,   STEP_HEALTH, STEP_CONTACT],
+    };
+
+    const SC = { GOAL:"goal", FORM:"form", THANKS:"thanks" };
+
+    const S = {
+      app:      { display:"flex", flexDirection:"column", height:"100vh", background:"#0F0F0F", color:"#F5F5F5", fontFamily:"system-ui,-apple-system,sans-serif", overflow:"hidden" },
+      hdr:      { display:"flex", alignItems:"center", padding:"0 18px", height:"54px", flexShrink:0, background:"#0F0F0F", borderBottom:"1px solid rgba(255,255,255,.07)" },
+      brand:    { display:"flex", alignItems:"center", gap:"9px", cursor:"pointer" },
+      logo:     { width:"30px", height:"30px", background:"#E5601A", borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"13px", fontWeight:900, color:"#fff", flexShrink:0, letterSpacing:"1px" },
+      bname:    { fontWeight:700, fontSize:"14px", letterSpacing:"-.01em", color:"#F5F5F5" },
+      main:     { flex:1, overflow:"hidden", display:"flex", flexDirection:"column" },
+      gscreen:  { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 18px", overflowY:"auto" },
+      geyebrow: { fontSize:"11px", fontWeight:700, letterSpacing:".1em", textTransform:"uppercase", color:"#E5601A", marginBottom:"9px" },
+      gtitle:   { fontSize:"clamp(22px,5vw,34px)", fontWeight:700, letterSpacing:"-.02em", textAlign:"center", marginBottom:"7px", lineHeight:1.15 },
+      gsub:     { fontSize:"13px", color:"rgba(245,245,245,.42)", textAlign:"center", marginBottom:"26px", maxWidth:"300px", lineHeight:1.6 },
+      gcards:   { display:"flex", flexDirection:"column", gap:"9px", width:"100%", maxWidth:"380px" },
+      gcard:    { background:"#1A1A1A", border:"1.5px solid rgba(255,255,255,.07)", borderRadius:"14px", padding:"16px", cursor:"pointer", display:"flex", alignItems:"center", gap:"13px" },
+      gemoji:   { width:"44px", height:"44px", background:"rgba(229,96,26,.12)", borderRadius:"11px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"19px", flexShrink:0 },
+      gtext:    { flex:1 },
+      gname:    { fontSize:"15px", fontWeight:700, marginBottom:"2px" },
+      gdesc:    { fontSize:"12px", color:"rgba(245,245,245,.4)", lineHeight:1.4 },
+      garrow:   { color:"rgba(245,245,245,.22)", fontSize:"17px" },
+      fwrap:    { flex:1, display:"flex", flexDirection:"column", overflow:"hidden" },
+      ftop:     { padding:"16px 16px 0", flexShrink:0 },
+      fback:    { background:"none", border:"none", color:"rgba(245,245,245,.36)", fontSize:"12px", fontFamily:"inherit", cursor:"pointer", padding:0, marginBottom:"12px", display:"flex", alignItems:"center", gap:"5px" },
+      ftrack:   { height:"4px", background:"rgba(255,255,255,.07)", borderRadius:"2px", marginBottom:"14px", overflow:"hidden" },
+      ffill:    { height:"100%", background:"linear-gradient(90deg,#E5601A,#C08828)", borderRadius:"2px", transition:"width .35s ease" },
+      flblStep: { fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#E5601A", marginBottom:"3px" },
+      ftitle:   { fontSize:"18px", fontWeight:700, marginBottom:"2px" },
+      fsub:     { fontSize:"12px", color:"rgba(245,245,245,.38)", lineHeight:1.5 },
+      fscroll:  { flex:1, overflowY:"auto", padding:"12px 16px" },
+      fields:   { display:"flex", flexDirection:"column", gap:"13px", marginTop:"12px" },
+      field:    { display:"flex", flexDirection:"column", gap:"5px" },
+      flbl:     { fontSize:"13px", fontWeight:500, color:"rgba(245,245,245,.75)" },
+      frow:     { display:"flex", alignItems:"center", gap:"7px" },
+      inp:      { width:"100%", background:"#1A1A1A", border:"1.5px solid rgba(255,255,255,.09)", borderRadius:"10px", padding:"10px 12px", color:"#F5F5F5", fontFamily:"inherit", fontSize:"16px", outline:"none" },
+      funit:    { fontSize:"12px", color:"rgba(245,245,245,.3)", whiteSpace:"nowrap", flexShrink:0 },
+      cnote:    { background:"rgba(229,96,26,.07)", border:"1px solid rgba(229,96,26,.18)", borderRadius:"10px", padding:"10px 12px", marginTop:"12px", fontSize:"12px", color:"rgba(245,245,245,.5)", lineHeight:1.55 },
+      ffooter:  { padding:"10px 16px 18px", flexShrink:0, borderTop:"1px solid rgba(255,255,255,.06)" },
+      btnrow:   { display:"flex", gap:"8px" },
+      bbsm:     { background:"rgba(255,255,255,.05)", border:"1.5px solid rgba(255,255,255,.08)", borderRadius:"11px", padding:"0 15px", height:"48px", color:"rgba(245,245,245,.42)", fontFamily:"inherit", fontSize:"13px", fontWeight:500, cursor:"pointer", flexShrink:0 },
+      bnext:    { flex:1, background:"#E5601A", border:"none", borderRadius:"11px", height:"48px", cursor:"pointer", fontFamily:"inherit", fontSize:"15px", fontWeight:700, color:"#fff" },
+      bsubmit:  { flex:1, background:"linear-gradient(135deg,#E5601A,#C08828)", border:"none", borderRadius:"11px", height:"48px", cursor:"pointer", fontFamily:"inherit", fontSize:"15px", fontWeight:700, color:"#fff" },
+      ty:       { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px", textAlign:"center", overflowY:"auto" },
+      tyEmoji:  { fontSize:"56px", marginBottom:"14px" },
+      tyTitle:  { fontSize:"26px", fontWeight:700, letterSpacing:"-.02em", marginBottom:"10px", lineHeight:1.2 },
+      tyMsg:    { fontSize:"15px", color:"rgba(245,245,245,.68)", lineHeight:1.7, maxWidth:"300px", marginBottom:"20px" },
+      tyCard:   { background:"rgba(229,96,26,.08)", border:"1px solid rgba(229,96,26,.22)", borderRadius:"12px", padding:"12px 16px", marginBottom:"20px", width:"100%", maxWidth:"300px", textAlign:"left" },
+      tyCrow:   { display:"flex", alignItems:"center", gap:"8px", fontSize:"13px", color:"rgba(245,245,245,.65)", padding:"4px 0" },
+      tyDiv:    { width:"40px", height:"2px", background:"linear-gradient(90deg,#E5601A,#C08828)", borderRadius:"1px", margin:"0 auto 18px" },
+      tyNext:   { background:"#1A1A1A", border:"1px solid rgba(255,255,255,.08)", borderRadius:"12px", padding:"14px 16px", width:"100%", maxWidth:"300px", textAlign:"left", marginBottom:"18px" },
+      tyNtitle: { fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#E5601A", marginBottom:"10px" },
+      tyStep:   { display:"flex", alignItems:"flex-start", gap:"10px", padding:"5px 0", fontSize:"13px", color:"rgba(245,245,245,.6)", lineHeight:1.45 },
+      tyNum:    { width:"20px", height:"20px", background:"rgba(229,96,26,.15)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"10px", fontWeight:700, color:"#E5601A", flexShrink:0, marginTop:"1px" },
+      tyCta:    { width:"100%", maxWidth:"300px" },
+      tyLink:   { display:"block", background:"linear-gradient(135deg,#E5601A,#C08828)", color:"#fff", fontWeight:700, fontSize:"14px", padding:"14px 20px", borderRadius:"12px", textDecoration:"none", textAlign:"center" },
+      tyCtaSub: { fontSize:"11px", color:"rgba(245,245,245,.28)", marginTop:"7px" },
+      tyRestart:{ marginTop:"14px", background:"none", border:"none", color:"rgba(245,245,245,.3)", fontFamily:"inherit", fontSize:"12px", cursor:"pointer", textDecoration:"underline" },
+    };
+
+    function App() {
+      const [screen,     setScreen]     = useState(SC.GOAL);
+      const [goalKey,    setGoalKey]    = useState(null);
+      const [step,       setStep]       = useState(0);
+      const [data,       setData]       = useState({});
+      const [submitting, setSubmitting] = useState(false);
+      const scrollRef = useRef(null);
+
+      async function submit() {
+        setSubmitting(true);
+        try { await fireWebhook(buildPayload(goalKey, data)); } catch(e) { console.error(e); }
+        setSubmitting(false);
+        setScreen(SC.THANKS);
+      }
+
+      function pickGoal(k) { setGoalKey(k); setData({}); setStep(0); setScreen(SC.FORM); }
+      function setField(id, val) { setData(p => ({ ...p, [id]: val })); }
+      function reset() { setScreen(SC.GOAL); setGoalKey(null); setData({}); setStep(0); }
+
+      const form   = goalKey ? FORMS[goalKey] : [];
+      const total  = form.length;
+      const pct    = total > 0 ? ((step + 1) / total) * 100 : 0;
+      const cur    = form[step];
+      const isLast = step === total - 1;
+      const goal   = goalKey ? GOALS[goalKey] : null;
+      const name   = data.name || "";
+
+      function next() {
+        if (!isLast) { setStep(s => s+1); setTimeout(() => scrollRef.current && scrollRef.current.scrollTo({top:0,behavior:"smooth"}), 50); }
+        else submit();
+      }
+      function back() {
+        if (step === 0) { setScreen(SC.GOAL); setGoalKey(null); } else setStep(s => s-1);
+      }
+
+      return (
+        <div style={S.app}>
+          <div style={S.hdr}>
+            <div style={S.brand} onClick={reset}>
+              <div style={S.logo}>HB</div>
+              <div style={S.bname}>Honey Badger <span style={{color:"#E5601A"}}>Coaching</span></div>
+            </div>
+          </div>
+
+          <div style={S.main}>
+
+            {screen === SC.GOAL && (
+              <div style={S.gscreen}>
+                <div style={S.geyebrow}>Honey Badger Coaching</div>
+                <div style={S.gtitle}>What's your goal?</div>
+                <div style={S.gsub}>Fill out the intake. Andrew reviews it personally and builds your program.</div>
+                <div style={S.gcards}>
+                  {Object.entries(GOALS).map(([k, g]) => (
+                    <div key={k} style={S.gcard} onClick={() => pickGoal(k)}>
+                      <div style={S.gemoji}>{g.emoji}</div>
+                      <div style={S.gtext}>
+                        <div style={S.gname}>{g.label}</div>
+                        <div style={S.gdesc}>{g.desc}</div>
+                      </div>
+                      <div style={S.garrow}>›</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {screen === SC.FORM && goalKey && (
+              <div style={S.fwrap}>
+                <div style={S.ftop}>
+                  <button style={S.fback} onClick={back}>← Back</button>
+                  <div style={S.ftrack}>
+                    <div style={{...S.ffill, width: pct + "%"}} />
+                  </div>
+                  <div style={S.flblStep}>{goal.emoji} {goal.label} · Step {step+1} of {total}</div>
+                  <div style={S.ftitle}>{cur && cur.title}</div>
+                  <div style={S.fsub}>{cur && cur.subtitle}</div>
+                </div>
+
+                <div style={S.fscroll} ref={scrollRef}>
+                  {cur && cur.isContact && (
+                    <div style={S.cnote}>
+                      <strong style={{color:"#E5601A"}}>Why we ask:</strong> Your intake goes straight to Andrew. He'll reach out personally within 24 hours.
+                    </div>
+                  )}
+                  <div style={{...S.fields, marginTop: cur && cur.isContact ? "10px" : 0}}>
+                    {cur && cur.fields.map(f => (
+                      <div key={f.id} style={S.field}>
+                        <label style={S.flbl}>{f.label}</label>
+                        {f.type === "select" ? (
+                          <select style={{...S.inp, cursor:"pointer"}} value={data[f.id]||""} onChange={e => setField(f.id, e.target.value)}>
+                            <option value="">Select…</option>
+                            {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        ) : f.type === "textarea" ? (
+                          <textarea style={{...S.inp, minHeight:"68px", lineHeight:1.5, resize:"vertical"}} rows={3} value={data[f.id]||""} onChange={e => setField(f.id, e.target.value)} placeholder={f.placeholder} />
+                        ) : (
+                          <div style={S.frow}>
+                            <input style={S.inp} type={f.type} value={data[f.id]||""} onChange={e => setField(f.id, e.target.value)} placeholder={f.placeholder} />
+                            {f.unit && <span style={S.funit}>{f.unit}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={S.ffooter}>
+                  <div style={S.btnrow}>
+                    <button style={S.bbsm} onClick={back}>← Back</button>
+                    {!isLast
+                      ? <button style={S.bnext} onClick={next}>Continue →</button>
+                      : <button style={{...S.bsubmit, opacity: submitting ? 0.6 : 1}} onClick={next} disabled={submitting}>
+                          {submitting ? "Sending…" : "✦ Submit My Intake"}
+                        </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {screen === SC.THANKS && (
+              <div style={S.ty}>
+                <div style={S.tyEmoji}>🙏🏼</div>
+                <div style={S.tyTitle}>{name ? "Thank you, " + name + "!" : "Thank you!"}</div>
+                <div style={S.tyMsg}>We can't wait to build your program and help you reach your goal. I'll be in touch ASAP. 💪🏼</div>
+                {(data.email || data.phone || data.insta) && (
+                  <div style={S.tyCard}>
+                    {data.email && <div style={S.tyCrow}><span>📧</span><span>{data.email}</span></div>}
+                    {data.phone && <div style={S.tyCrow}><span>📱</span><span>{data.phone}</span></div>}
+                    {data.insta && <div style={S.tyCrow}><span>📲</span><span>{data.insta}</span></div>}
+                  </div>
+                )}
+                <div style={S.tyDiv} />
+                <div style={S.tyNext}>
+                  <div style={S.tyNtitle}>What happens next</div>
+                  <div style={S.tyStep}><div style={S.tyNum}>1</div><span>Andrew reviews your intake and builds your custom program</span></div>
+                  <div style={S.tyStep}><div style={S.tyNum}>2</div><span>He reaches out within 24 hours to walk you through it</span></div>
+                  <div style={S.tyStep}><div style={S.tyNum}>3</div><span>You get started and move toward your goal</span></div>
+                </div>
+                <div style={S.tyCta}>
+                  <a href="https://my.movement.so/honeybadgercoaching" target="_blank" rel="noopener noreferrer" style={S.tyLink}>
+                    Already a member? Access your program →
+                  </a>
+                  <div style={S.tyCtaSub}>New? Join Honey Badger Coaching for $26/month — no contracts</div>
+                </div>
+                <button style={S.tyRestart} onClick={reset}>Submit another intake</button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
